@@ -1,0 +1,46 @@
+═══════════════════════════════════════════════════════════════
+  QUICK CONVERT - ICON DOSYALARI OLUŞTURMA LİNKLERİ
+═══════════════════════════════════════════════════════════════
+
+📌 EN KOLAY YOL (5 DAKİKA):
+
+1. FAVICON VE ICONS:
+   👉 https://favicon.io/favicon-generator/
+   
+   Adımlar:
+   - "Text" sekmesine tıkla
+   - Text: QC
+   - Background: #0ea5e9
+   - Text Color: #ffffff
+   - Download → Zip'i aç
+   - Dosyaları /public klasörüne kopyala
+
+2. OPEN GRAPH IMAGE:
+   👉 https://www.canva.com/create/facebook-posts/
+   
+   Adımlar:
+   - Boyut: 1200x630px
+   - Tasarım yap
+   - PNG olarak indir
+   - og-image.png olarak /public'e kaydet
+
+═══════════════════════════════════════════════════════════════
+
+📁 GEREKLİ DOSYALAR:
+
+✅ favicon.ico
+✅ icon-192.png (192x192px)
+✅ icon-512.png (512x512px)
+✅ apple-touch-icon.png (180x180px)
+✅ og-image.png (1200x630px)
+
+═══════════════════════════════════════════════════════════════
+
+🔗 ALTERNATİF ARAÇLAR:
+
+- RealFaviconGenerator: https://realfavicongenerator.net/
+- Figma: https://www.figma.com/
+- Adobe Express: https://www.adobe.com/express/
+
+═══════════════════════════════════════════════════════════════
+

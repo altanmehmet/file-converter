@@ -1,0 +1,240 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Quick Convert - OG Image Generator</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        body {
+            font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            background: #0f172a;
+            color: #e2e8f0;
+            padding: 20px;
+        }
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+        h1 {
+            text-align: center;
+            color: #60a5fa;
+            margin-bottom: 30px;
+        }
+        .preview-container {
+            background: #1e293b;
+            padding: 20px;
+            border-radius: 12px;
+            margin-bottom: 20px;
+            border: 1px solid #334155;
+        }
+        .og-image {
+            width: 1200px;
+            height: 630px;
+            background: linear-gradient(135deg, #38bdf8 0%, #a855f7 100%);
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            border-radius: 8px;
+            box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.3);
+            position: relative;
+            overflow: hidden;
+        }
+        .og-image::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: 
+                radial-gradient(circle at 20% 50%, rgba(255,255,255,0.1) 0%, transparent 50%),
+                radial-gradient(circle at 80% 50%, rgba(255,255,255,0.1) 0%, transparent 50%);
+        }
+        .og-image h2 {
+            font-size: 72px;
+            font-weight: 800;
+            color: white;
+            margin: 0;
+            text-shadow: 0 4px 6px rgba(0, 0, 0, 0.3);
+            z-index: 1;
+            letter-spacing: -2px;
+        }
+        .og-image p {
+            font-size: 32px;
+            color: rgba(255, 255, 255, 0.95);
+            margin: 20px 0 0 0;
+            z-index: 1;
+            font-weight: 500;
+        }
+        .controls {
+            background: #1e293b;
+            padding: 20px;
+            border-radius: 12px;
+            border: 1px solid #334155;
+        }
+        .button {
+            background: #3b82f6;
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 6px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            margin: 10px 5px;
+            transition: background 0.2s;
+        }
+        .button:hover {
+            background: #2563eb;
+        }
+        .button-secondary {
+            background: #475569;
+        }
+        .button-secondary:hover {
+            background: #64748b;
+        }
+        .instructions {
+            background: #0f172a;
+            padding: 20px;
+            border-radius: 8px;
+            margin-top: 20px;
+            border-left: 4px solid #3b82f6;
+        }
+        .instructions h3 {
+            color: #60a5fa;
+            margin-bottom: 10px;
+        }
+        .instructions ol {
+            margin-left: 20px;
+            line-height: 1.8;
+        }
+        .instructions code {
+            background: #1e293b;
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-family: monospace;
+        }
+        @media (max-width: 1300px) {
+            .og-image {
+                width: 100%;
+                max-width: 1200px;
+                aspect-ratio: 1200/630;
+                height: auto;
+            }
+            .og-image h2 {
+                font-size: clamp(36px, 6vw, 72px);
+            }
+            .og-image p {
+                font-size: clamp(18px, 2.5vw, 32px);
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🚀 Quick Convert - OG Image Generator</h1>
+        
+        <div class="preview-container">
+            <div class="og-image" id="ogImage">
+                <h2>Quick Convert</h2>
+                <p>Fast & Free File Converter</p>
+            </div>
+        </div>
+
+        <div class="controls">
+            <button class="button" onclick="downloadImage()">📥 Download PNG (1200x630)</button>
+            <button class="button button-secondary" onclick="copyToClipboard()">📋 Copy Instructions</button>
+        </div>
+
+        <div class="instructions">
+            <h3>📝 Nasıl Kullanılır:</h3>
+            <ol>
+                <li>Yukarıdaki görseli görüyorsun (1200x630px)</li>
+                <li><strong>"Download PNG"</strong> butonuna tıkla</li>
+                <li>İndirilen dosyayı <code>og-image.png</code> olarak yeniden adlandır</li>
+                <li><code>/public/og-image.png</code> klasörüne kopyala</li>
+                <li>✅ Hazır! Artık Open Graph image'ın var!</li>
+            </ol>
+        </div>
+    </div>
+
+    <script>
+        function downloadImage() {
+            const canvas = document.createElement('canvas');
+            canvas.width = 1200;
+            canvas.height = 630;
+            const ctx = canvas.getContext('2d');
+
+            // Gradient background
+            const gradient = ctx.createLinearGradient(0, 0, 1200, 630);
+            gradient.addColorStop(0, '#38bdf8'); // Sky-400
+            gradient.addColorStop(1, '#a855f7'); // Purple-400
+            ctx.fillStyle = gradient;
+            ctx.fillRect(0, 0, 1200, 630);
+
+            // Add some glow effects
+            const radialGradient1 = ctx.createRadialGradient(240, 315, 0, 240, 315, 400);
+            radialGradient1.addColorStop(0, 'rgba(255, 255, 255, 0.15)');
+            radialGradient1.addColorStop(1, 'transparent');
+            ctx.fillStyle = radialGradient1;
+            ctx.fillRect(0, 0, 1200, 630);
+
+            const radialGradient2 = ctx.createRadialGradient(960, 315, 0, 960, 315, 400);
+            radialGradient2.addColorStop(0, 'rgba(255, 255, 255, 0.15)');
+            radialGradient2.addColorStop(1, 'transparent');
+            ctx.fillStyle = radialGradient2;
+            ctx.fillRect(0, 0, 1200, 630);
+
+            // Text
+            ctx.fillStyle = 'white';
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+
+            // Main title
+            ctx.font = 'bold 72px system-ui, -apple-system, sans-serif';
+            ctx.shadowColor = 'rgba(0, 0, 0, 0.3)';
+            ctx.shadowBlur = 10;
+            ctx.shadowOffsetX = 0;
+            ctx.shadowOffsetY = 4;
+            ctx.fillText('Quick Convert', 600, 280);
+
+            // Subtitle
+            ctx.font = '500 32px system-ui, -apple-system, sans-serif';
+            ctx.shadowBlur = 8;
+            ctx.fillStyle = 'rgba(255, 255, 255, 0.95)';
+            ctx.fillText('Fast & Free File Converter', 600, 350);
+
+            // Download
+            canvas.toBlob(function(blob) {
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = 'og-image.png';
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+                URL.revokeObjectURL(url);
+            }, 'image/png');
+        }
+
+        function copyToClipboard() {
+            const text = `1. Bu HTML dosyasını browser'da aç
+2. "Download PNG" butonuna tıkla
+3. İndirilen dosyayı og-image.png olarak yeniden adlandır
+4. /public/og-image.png klasörüne kopyala
+5. ✅ Hazır!`;
+
+            navigator.clipboard.writeText(text).then(() => {
+                alert('✅ Talimatlar kopyalandı!');
+            });
+        }
+    </script>
+</body>
+</html>
+
