@@ -10,6 +10,9 @@ node_modules/
 /.next/
 /out/
 /tmp/
+file-converter-app/.next/
+file-converter-app/tmp/
+file-converter-app/node_modules/
 
 # Production
 /build
