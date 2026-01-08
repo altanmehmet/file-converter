@@ -31,11 +31,18 @@ export const convertPdfToDocx = async (jobId: string, inputPath: string, outputD
     { timeoutMs: 120000 },
   );
 
-  const baseName = sanitizeFilename(path.parse(inputPath).name) + '.docx';
-  const outPath = path.join(outputDir, baseName);
+  // LibreOffice might create the file with a different name, so we need to find it
+  const files = await fs.readdir(outputDir);
+  const docxFile = files.find((f) => f.toLowerCase().endsWith('.docx'));
+  
+  if (!docxFile) {
+    throw new Error('Conversion failed: output file not found');
+  }
+
+  const outPath = path.join(outputDir, docxFile);
   const stat = await fs.stat(outPath);
   const output: OutputFile = {
-    name: baseName,
+    name: docxFile,
     path: outPath,
     size: stat.size,
     mimeType: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',

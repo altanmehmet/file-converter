@@ -10,6 +10,7 @@ type UploadItem = {
   size: number;
   ext: string;
   mimeType: string;
+  file?: File; // Store original file for preview
 };
 
 type ClientJob = Job & { outputFiles: (OutputFile & { downloadUrl?: string })[] };
@@ -42,7 +43,6 @@ type Copy = {
   jobQueueDetails: string;
   jobQueueEmpty: string;
   inputs: string;
-  logs: string;
   retry: string;
   download: string;
   error: string;
@@ -61,8 +61,6 @@ type Copy = {
   settingsModalTTL: string;
   settingsModalTTLDesc: string;
   settingsModalAutoZipDesc: string;
-  logsTitle: string;
-  logsEmpty: string;
   presetOptionsTitle: string;
   presetBooleanLabel: string;
   presetOptionLabels: {
@@ -94,6 +92,14 @@ type Copy = {
   cookieBannerAccept: string;
   cookieBannerReject: string;
   cookieBannerLearnMore: string;
+  preview: string;
+  closePreview: string;
+  history: string;
+  historyEmpty: string;
+  clearHistory: string;
+  totalSize: string;
+  rateLimitWarning: string;
+  rateLimitExceeded: string;
   statusLabels: Record<Job['status'], string>;
   presetCopy?: Partial<Record<PresetId, { description?: string; warning?: string }>>;
   messages: {
@@ -134,7 +140,6 @@ const translations: Record<Language, Copy> = {
     jobQueueDetails: 'Ayrıntılar',
     jobQueueEmpty: 'Kuyruk boş.',
     inputs: 'Girdiler',
-    logs: 'Günlükler',
     retry: 'Tekrar dene',
     download: 'İndir',
     error: 'Hata',
@@ -153,8 +158,6 @@ const translations: Record<Language, Copy> = {
     settingsModalTTL: 'TTL (dakika)',
     settingsModalTTLDesc: 'Varsayılan 10 dakika',
     settingsModalAutoZipDesc: 'İşler bitince otomatik ZIP indirme.',
-    logsTitle: 'Günlükler',
-    logsEmpty: 'Günlük yok.',
     presetOptionsTitle: 'Ön Ayar Ayarları',
     presetBooleanLabel: 'Aktif',
     presetOptionLabels: {
@@ -186,6 +189,14 @@ const translations: Record<Language, Copy> = {
     cookieBannerAccept: 'Kabul Et',
     cookieBannerReject: 'Reddet',
     cookieBannerLearnMore: 'Daha Fazla Bilgi',
+    preview: 'Önizleme',
+    closePreview: 'Kapat',
+    history: 'Geçmiş',
+    historyEmpty: 'Henüz dönüşüm geçmişi yok.',
+    clearHistory: 'Geçmişi Temizle',
+    totalSize: 'Toplam Boyut',
+    rateLimitWarning: 'Dakikada maksimum {limit} dönüşüm yapabilirsiniz.',
+    rateLimitExceeded: 'Rate limit aşıldı. Lütfen {seconds} saniye bekleyin.',
     statusLabels: {
       waiting: 'BEKLEME',
       processing: 'İŞLENİYOR',
@@ -240,7 +251,6 @@ const translations: Record<Language, Copy> = {
     jobQueueDetails: 'Details',
     jobQueueEmpty: 'Queue is empty.',
     inputs: 'Inputs',
-    logs: 'Logs',
     retry: 'Retry',
     download: 'Download',
     error: 'Error',
@@ -259,8 +269,6 @@ const translations: Record<Language, Copy> = {
     settingsModalTTL: 'TTL (minutes)',
     settingsModalTTLDesc: 'Default 10 minutes',
     settingsModalAutoZipDesc: 'Auto download ZIP when jobs complete.',
-    logsTitle: 'Logs',
-    logsEmpty: 'No logs.',
     presetOptionsTitle: 'Preset Options',
     presetBooleanLabel: 'Enabled',
     presetOptionLabels: {
@@ -292,6 +300,14 @@ const translations: Record<Language, Copy> = {
     cookieBannerAccept: 'Accept',
     cookieBannerReject: 'Reject',
     cookieBannerLearnMore: 'Learn More',
+    preview: 'Preview',
+    closePreview: 'Close',
+    history: 'History',
+    historyEmpty: 'No conversion history yet.',
+    clearHistory: 'Clear History',
+    totalSize: 'Total Size',
+    rateLimitWarning: 'Maximum {limit} conversions per minute.',
+    rateLimitExceeded: 'Rate limit exceeded. Please wait {seconds} seconds.',
     statusLabels: {
       waiting: 'WAITING',
       processing: 'PROCESSING',
@@ -363,10 +379,16 @@ export default function WorkspacePage() {
   const [ttlMinutes, setTtlMinutes] = useState(10);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [isDetailsOpen, setIsDetailsOpen] = useState(false);
-  const [logsJob, setLogsJob] = useState<ClientJob | null>(null);
   const [draggingId, setDraggingId] = useState<string | null>(null);
   const [language, setLanguage] = useState<Language>('en');
   const [cookieConsent, setCookieConsent] = useState<boolean | null>(null);
+  const [previewFile, setPreviewFile] = useState<UploadItem | null>(null);
+  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+  const [conversionHistory, setConversionHistory] = useState<ClientJob[]>([]);
+  const [isHistoryOpen, setIsHistoryOpen] = useState(false);
+  const [rateLimitCount, setRateLimitCount] = useState(0);
+  const [rateLimitResetTime, setRateLimitResetTime] = useState<number | null>(null);
+  const [fileProgress, setFileProgress] = useState<Record<string, number>>({});
 
   const optionDefaults = useMemo(() => {
     return PRESETS.reduce(
@@ -406,6 +428,18 @@ export default function WorkspacePage() {
       } else {
         setCookieConsent(null);
       }
+
+      // Load conversion history
+      const history = localStorage.getItem('conversion_history');
+      if (history) {
+        try {
+          const parsed = JSON.parse(history);
+          setConversionHistory(parsed.slice(0, 20)); // Keep last 20
+        } catch (e) {
+          console.error('Failed to load history', e);
+        }
+      }
+
     }
   }, []);
 
@@ -448,12 +482,13 @@ export default function WorkspacePage() {
       }
 
       const mapped: UploadItem[] =
-        ((data.uploaded as UploadResponse[]) || []).map((f) => ({
+        ((data.uploaded as UploadResponse[]) || []).map((f, index) => ({
           id: f.id,
           name: f.name,
           size: f.size,
           ext: f.ext,
           mimeType: f.mimeType,
+          file: filtered[index], // Store original File object for preview
         })) || [];
 
       setUploads((prev) => [...prev, ...mapped]);
@@ -471,6 +506,25 @@ export default function WorkspacePage() {
     fileInputRef.current?.click();
   };
 
+  // Rate limiting: max 10 conversions per minute
+  const RATE_LIMIT_MAX = 10;
+  const RATE_LIMIT_WINDOW = 60000; // 1 minute
+
+  const checkRateLimit = (): boolean => {
+    const now = Date.now();
+    if (rateLimitResetTime && now < rateLimitResetTime) {
+      const remaining = Math.ceil((rateLimitResetTime - now) / 1000);
+      setStatusMessage(text.rateLimitExceeded.replace('{seconds}', String(remaining)));
+      return false;
+    }
+    if (rateLimitCount >= RATE_LIMIT_MAX) {
+      setRateLimitResetTime(now + RATE_LIMIT_WINDOW);
+      setStatusMessage(text.rateLimitExceeded.replace('{seconds}', '60'));
+      return false;
+    }
+    return true;
+  };
+
   const startConversion = async () => {
     if (!uploads.length) {
       setStatusMessage(text.messages.addFilesFirst);
@@ -482,8 +536,22 @@ export default function WorkspacePage() {
       return;
     }
 
+    // Rate limiting check
+    if (!checkRateLimit()) {
+      return;
+    }
+
     try {
       setStatusMessage(text.messages.queueing);
+      setRateLimitCount((prev) => prev + 1);
+      
+      // Reset rate limit after window
+      if (rateLimitCount === 0) {
+        setTimeout(() => {
+          setRateLimitCount(0);
+          setRateLimitResetTime(null);
+        }, RATE_LIMIT_WINDOW);
+      }
       const res = await fetch('/api/convert', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -502,13 +570,35 @@ export default function WorkspacePage() {
 
       const newJobs: ClientJob[] = (data.jobs || []).map(normalizeJob);
       setJobs((prev) => [...newJobs, ...prev]);
+      
+      // Save to history when jobs are done
+      if (typeof window !== 'undefined') {
+        const currentHistory = JSON.parse(localStorage.getItem('conversion_history') || '[]');
+        const updatedHistory = [...newJobs, ...currentHistory].slice(0, 20);
+        localStorage.setItem('conversion_history', JSON.stringify(updatedHistory));
+        setConversionHistory(updatedHistory);
+      }
+
       if (autoZip) {
         setStatusMessage(text.messages.queuedAuto);
       } else {
         setStatusMessage(text.messages.queued);
       }
     } catch (err) {
-      setStatusMessage(err instanceof Error ? err.message : text.messages.processError);
+      // Better error messages
+      let errorMessage = text.messages.processError;
+      if (err instanceof Error) {
+        if (err.message.includes('network') || err.message.includes('fetch')) {
+          errorMessage = 'Network error. Please check your connection and try again.';
+        } else if (err.message.includes('timeout')) {
+          errorMessage = 'Request timeout. The file might be too large. Please try again.';
+        } else if (err.message.includes('413') || err.message.includes('too large')) {
+          errorMessage = 'File too large. Maximum size is 150MB per file.';
+        } else {
+          errorMessage = err.message || text.messages.processError;
+        }
+      }
+      setStatusMessage(errorMessage);
     }
   };
 
@@ -536,6 +626,50 @@ export default function WorkspacePage() {
     }
   };
 
+  // Keyboard shortcuts
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      // Ctrl/Cmd + K: Convert
+      if ((e.ctrlKey || e.metaKey) && e.key === 'k') {
+        e.preventDefault();
+        if (uploads.length && !isUploading) startConversion();
+      }
+      // Ctrl/Cmd + D: Clear
+      if ((e.ctrlKey || e.metaKey) && e.key === 'd') {
+        e.preventDefault();
+        clearUploads();
+      }
+      // Ctrl/Cmd + ,: Settings
+      if ((e.ctrlKey || e.metaKey) && e.key === ',') {
+        e.preventDefault();
+        setIsSettingsOpen(true);
+      }
+      // Esc: Close modals
+      if (e.key === 'Escape') {
+        setIsSettingsOpen(false);
+        setIsDetailsOpen(false);
+        setPreviewFile(null);
+        setIsHistoryOpen(false);
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [uploads.length, isUploading]);
+
+  // Update file progress from jobs
+  useEffect(() => {
+    const progress: Record<string, number> = {};
+    jobs.forEach((job) => {
+      if (job.status === 'processing') {
+        job.inputFiles.forEach((file) => {
+          progress[file.id] = job.progress || 0;
+        });
+      }
+    });
+    setFileProgress(progress);
+  }, [jobs]);
+
   useEffect(() => {
     const hasActive = jobs.some((job) => job.status === 'waiting' || job.status === 'processing');
     if (!hasActive) return;
@@ -554,6 +688,7 @@ export default function WorkspacePage() {
     (sum, job) => sum + job.outputFiles.reduce((a, f) => a + (f.size || 0), 0),
     0,
   );
+  const totalUploadSize = uploads.reduce((sum, file) => sum + file.size, 0);
 
   const handleDownload = (job: ClientJob, file?: OutputFile & { downloadUrl?: string }) => {
     const url = file?.downloadUrl || `/api/download/${job.id}`;
@@ -693,16 +828,26 @@ export default function WorkspacePage() {
               <p className="text-[10px] sm:text-xs uppercase tracking-[0.2em] text-sky-400 font-bold">Quick Convert</p>
               <h1 className="text-xl sm:text-2xl font-bold bg-gradient-to-r from-sky-400 to-purple-400 bg-clip-text text-transparent break-words">{text.workspaceTitle}</h1>
               <p className="text-xs sm:text-sm text-slate-300 mt-1">{text.workspaceLead}</p>
+              <p className="text-[10px] sm:text-xs text-emerald-400/80 mt-1 flex items-center gap-1">
+                <span>🔒</span>
+                <span>{language === 'tr' ? 'Tüm dosyalar AES-256 şifreleme ile güvenli şekilde işlenir' : 'All files are processed securely with AES-256 encryption'}</span>
+              </p>
               <div className="flex flex-wrap gap-2 sm:gap-4 mt-2 text-[10px] sm:text-xs text-slate-400">
                 <a href="/privacy" className="hover:text-slate-200 underline">Privacy</a>
                 <a href="/terms" className="hover:text-slate-200 underline">Terms</a>
               </div>
             </div>
             <div className="flex items-center gap-2 w-full sm:w-auto">
+              {rateLimitCount >= RATE_LIMIT_MAX && rateLimitResetTime && (
+                <div className="text-xs text-amber-300/80">
+                  {Math.ceil((rateLimitResetTime - Date.now()) / 1000)}s
+                </div>
+              )}
               <button
                 onClick={startConversion}
                 className="flex-1 sm:flex-none rounded-lg bg-sky-600 px-4 py-2.5 sm:py-2 text-sm font-semibold text-white transition-all hover:bg-sky-500 disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:bg-sky-600 touch-manipulation"
-                disabled={isUploading || !uploads.length}
+                disabled={isUploading || !uploads.length || (rateLimitCount >= RATE_LIMIT_MAX && rateLimitResetTime !== null && Date.now() < rateLimitResetTime)}
+                title={rateLimitCount >= RATE_LIMIT_MAX && rateLimitResetTime !== null ? text.rateLimitExceeded.replace('{seconds}', String(Math.ceil((rateLimitResetTime - Date.now()) / 1000))) : undefined}
               >
                 {text.convert}
               </button>
@@ -758,9 +903,16 @@ export default function WorkspacePage() {
           <section className="rounded-xl sm:rounded-2xl border border-slate-700/50 bg-slate-800/80 backdrop-blur-xl shadow-xl p-3 sm:p-4">
             <div className="mb-3 flex items-center justify-between">
               <h3 className="text-base sm:text-lg font-semibold">{text.fileQueueTitle}</h3>
-              <span className="text-sm text-slate-300">
-                {uploads.length} {text.fileWord}
-              </span>
+              <div className="flex flex-col items-end gap-1">
+                <span className="text-sm text-slate-300">
+                  {uploads.length} {text.fileWord}
+                </span>
+                {totalUploadSize > 0 && (
+                  <span className="text-xs text-slate-400">
+                    {text.totalSize}: {formatBytes(totalUploadSize)}
+                  </span>
+                )}
+              </div>
             </div>
             {!uploads.length ? (
               <p className="text-sm text-slate-400">{text.fileQueueEmpty}</p>
@@ -778,17 +930,35 @@ export default function WorkspacePage() {
                     onDrop={() => setDraggingId(null)}
                     className="flex items-center justify-between gap-3 rounded-xl border border-slate-600/50 bg-slate-700/50 px-3 py-2 hover:bg-slate-700/70 hover:border-slate-500 transition-all shadow-md"
                   >
-                    <div className="flex items-center gap-3">
+                    <div className="flex items-center gap-3 flex-1 min-w-0">
                       <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-slate-700/60 border border-slate-600/60 text-xs font-bold uppercase text-slate-300">
                         {file.ext.replace('.', '') || '📄'}
                       </div>
-                      <div>
-                        <p className="text-sm font-semibold">{file.name}</p>
-                        <p className="text-xs text-slate-400">{formatBytes(file.size)}</p>
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2">
+                          <p className="text-sm font-semibold truncate">{file.name}</p>
+                          <button
+                            onClick={() => setPreviewFile(file)}
+                            className="flex-shrink-0 flex items-center gap-1 rounded-md bg-sky-600 px-2 py-1 text-[10px] font-bold text-white hover:bg-sky-500 transition-all shadow-md"
+                          >
+                            👁️ PREVIEW
+                          </button>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <p className="text-xs text-slate-400">{formatBytes(file.size)}</p>
+                          {fileProgress[file.id] !== undefined && (
+                            <div className="flex-1 max-w-24 h-1 bg-slate-700 rounded-full overflow-hidden">
+                              <div
+                                className="h-full bg-sky-500 transition-all"
+                                style={{ width: `${fileProgress[file.id]}%` }}
+                              />
+                            </div>
+                          )}
+                        </div>
                       </div>
                     </div>
                     <button
-                      className="text-xs text-slate-300 underline underline-offset-4"
+                      className="text-xs text-slate-300 underline underline-offset-4 hover:text-slate-100 transition-colors"
                       onClick={() => setUploads((prev) => prev.filter((f) => f.id !== file.id))}
                     >
                       {text.remove}
@@ -826,12 +996,6 @@ export default function WorkspacePage() {
                         <span className={`rounded-full px-3 py-1 text-xs font-semibold ${statusStyles[job.status]}`}>
                           {text.statusLabels[job.status]}
                         </span>
-                        <button
-                          className="text-xs text-slate-200 underline"
-                          onClick={() => setLogsJob(job)}
-                        >
-                          {text.logs}
-                        </button>
                         {job.status === 'failed' && (
                           <button
                             className="rounded-full bg-white/10 px-3 py-1 text-xs text-white hover:bg-white/20"
@@ -964,14 +1128,40 @@ export default function WorkspacePage() {
                   <p className="text-sm font-semibold">{text.languageLabel}</p>
                   <p className="text-xs text-slate-400">{text.languageDesc}</p>
                 </div>
-                <select
-                  value={language}
-                  onChange={(e) => setLanguage(e.target.value as Language)}
-                  className="rounded-lg border border-slate-600/60 bg-slate-800/80 px-3 py-2 text-sm text-slate-200 outline-none focus:border-sky-500/50 focus:ring-1 focus:ring-sky-500/30 transition-all cursor-pointer"
+                <button
+                  onClick={() => {
+                    setIsSettingsOpen(false);
+                    setIsHistoryOpen(true);
+                  }}
+                  className="text-xs text-slate-300 underline hover:text-slate-100"
                 >
-                  <option value="tr">{text.languageOptionTr}</option>
-                  <option value="en">{text.languageOptionEn}</option>
-                </select>
+                  {text.history}
+                </button>
+              </div>
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm font-semibold">{text.languageLabel}</p>
+                  <p className="text-xs text-slate-400">{text.languageDesc}</p>
+                </div>
+                <div className="flex items-center gap-2">
+                  <button
+                    onClick={() => {
+                      setIsSettingsOpen(false);
+                      setIsHistoryOpen(true);
+                    }}
+                    className="text-xs text-slate-300 underline hover:text-slate-100"
+                  >
+                    {text.history}
+                  </button>
+                  <select
+                    value={language}
+                    onChange={(e) => setLanguage(e.target.value as Language)}
+                    className="rounded-lg border border-slate-600/60 bg-slate-800/80 px-3 py-2 text-sm text-slate-200 outline-none focus:border-sky-500/50 focus:ring-1 focus:ring-sky-500/30 transition-all cursor-pointer"
+                  >
+                    <option value="tr">{text.languageOptionTr}</option>
+                    <option value="en">{text.languageOptionEn}</option>
+                  </select>
+                </div>
               </div>
               <div className="flex items-center justify-between">
                 <div>
@@ -1002,39 +1192,154 @@ export default function WorkspacePage() {
                   className="w-20 rounded-lg border border-slate-600/60 bg-slate-800/80 px-3 py-2 text-sm text-slate-200 outline-none focus:border-sky-500/50 focus:ring-1 focus:ring-sky-500/30 transition-all"
                 />
               </div>
+              {rateLimitCount > 0 && (
+                <div className="rounded-lg border border-amber-500/30 bg-amber-500/10 p-2">
+                  <p className="text-xs text-amber-200">
+                    {text.rateLimitWarning.replace('{limit}', String(RATE_LIMIT_MAX))}
+                  </p>
+                  <p className="text-xs text-amber-300/80 mt-1">
+                    Used: {rateLimitCount}/{RATE_LIMIT_MAX} this minute
+                  </p>
+                </div>
+              )}
             </div>
           </div>
         </div>
       )}
 
-      {logsJob && (
+      {previewFile && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm p-3 sm:p-4">
           <div className="w-full max-w-2xl rounded-xl sm:rounded-2xl border border-slate-700/50 bg-slate-800/95 backdrop-blur-xl p-4 sm:p-5 shadow-2xl max-h-[90vh] overflow-y-auto">
-            <div className="flex items-center justify-between">
-              <h3 className="text-lg font-semibold">
-                {text.logsTitle} - {logsJob.id}
-              </h3>
-              <button className="text-sm text-slate-200 underline" onClick={() => setLogsJob(null)}>
-                {text.close}
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-lg font-semibold">{text.preview}</h3>
+              <button className="text-sm text-slate-200 underline" onClick={() => {
+                setPreviewFile(null);
+                if (previewUrl) {
+                  URL.revokeObjectURL(previewUrl);
+                  setPreviewUrl(null);
+                }
+              }}>
+                {text.closePreview}
               </button>
             </div>
-            <div className="mt-3 max-h-[60vh] space-y-2 overflow-y-auto rounded-xl bg-black/40 p-3 text-xs text-slate-200">
-              {logsJob.logs.length === 0 ? (
-                <p>{text.logsEmpty}</p>
+            <div className="space-y-3">
+              <div className="rounded-lg border border-slate-600/50 bg-slate-700/50 p-4">
+                <p className="text-sm font-semibold mb-2">{previewFile.name}</p>
+                <div className="flex flex-wrap gap-4 text-xs text-slate-400">
+                  <span>Size: {formatBytes(previewFile.size)}</span>
+                  <span>Type: {previewFile.mimeType}</span>
+                  <span>Extension: {previewFile.ext}</span>
+                </div>
+              </div>
+              {previewFile.ext.match(/\.(png|jpg|jpeg|webp|gif)$/i) && (
+                <div className="rounded-lg border border-slate-600/50 bg-slate-700/50 p-4">
+                  <p className="text-xs text-slate-400 mb-2">Image Preview</p>
+                  <div className="relative max-h-96 overflow-auto rounded bg-black/40 p-4 flex items-center justify-center">
+                    {previewFile.file ? (
+                      <img
+                        src={previewUrl || URL.createObjectURL(previewFile.file)}
+                        alt={previewFile.name}
+                        className="max-w-full h-auto rounded shadow-lg"
+                        onLoad={() => {
+                          if (!previewUrl && previewFile.file) {
+                            setPreviewUrl(URL.createObjectURL(previewFile.file));
+                          }
+                        }}
+                        onError={(e) => {
+                          console.error('Image preview error');
+                          (e.target as HTMLImageElement).style.display = 'none';
+                        }}
+                      />
+                    ) : (
+                      <p className="text-xs text-slate-500">Image preview not available. Please upload a new file.</p>
+                    )}
+                  </div>
+                </div>
+              )}
+              {previewFile.ext.match(/\.(pdf)$/i) && (
+                <div className="rounded-lg border border-slate-600/50 bg-slate-700/50 p-4">
+                  <p className="text-xs text-slate-400 mb-2">PDF Preview</p>
+                  <div className="relative max-h-96 overflow-auto rounded bg-black/40 p-4">
+                    {previewFile.file ? (
+                      <iframe
+                        src={previewUrl || URL.createObjectURL(previewFile.file)}
+                        className="w-full h-[600px] rounded border-0"
+                        title={previewFile.name}
+                        onLoad={() => {
+                          if (!previewUrl && previewFile.file) {
+                            setPreviewUrl(URL.createObjectURL(previewFile.file));
+                          }
+                        }}
+                      />
+                    ) : (
+                      <div className="flex items-center justify-center h-[600px]">
+                        <p className="text-xs text-slate-500">PDF preview not available</p>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
+              {!previewFile.file && (
+                <div className="rounded-lg border border-amber-500/30 bg-amber-500/10 p-3">
+                  <p className="text-xs text-amber-200">
+                    {language === 'tr' 
+                      ? 'Dosya içeriği preview için mevcut değil. Yeni bir dosya yükleyip tekrar deneyin.'
+                      : 'File content not available for preview. Please upload a new file and try again.'}
+                  </p>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {isHistoryOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm p-3 sm:p-4">
+          <div className="w-full max-w-2xl rounded-xl sm:rounded-2xl border border-slate-700/50 bg-slate-800/95 backdrop-blur-xl p-4 sm:p-5 shadow-2xl max-h-[90vh] overflow-y-auto">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-lg font-semibold">{text.history}</h3>
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={() => {
+                    if (typeof window !== 'undefined') {
+                      localStorage.removeItem('conversion_history');
+                      setConversionHistory([]);
+                    }
+                  }}
+                  className="text-xs text-rose-300 underline hover:text-rose-200"
+                >
+                  {text.clearHistory}
+                </button>
+                <button className="text-sm text-slate-200 underline" onClick={() => setIsHistoryOpen(false)}>
+                  {text.closePreview}
+                </button>
+              </div>
+            </div>
+            <div className="space-y-2">
+              {conversionHistory.length === 0 ? (
+                <p className="text-sm text-slate-400">{text.historyEmpty}</p>
               ) : (
-                logsJob.logs.map((log) => (
-                  <div key={`${log.ts}-${log.message}`} className="flex items-start gap-2">
-                    <span className="text-[10px] text-slate-500">
-                      {new Date(log.ts).toLocaleTimeString()}
-                    </span>
-                    <span
-                      className={`rounded-full px-2 py-[2px] text-[10px] ${
-                        log.level === 'error' ? 'bg-rose-500/30 text-rose-100' : 'bg-slate-700 text-slate-100'
-                      }`}
-                    >
-                      {log.level}
-                    </span>
-                    <span className="flex-1">{log.message}</span>
+                conversionHistory.map((job) => (
+                  <div key={job.id} className="rounded-lg border border-slate-600/50 bg-slate-700/50 p-3 hover:bg-slate-700/70 transition-all">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <p className="text-sm font-semibold">{presetMap[job.presetId]?.title || job.presetId}</p>
+                        <p className="text-xs text-slate-400">
+                          {job.inputFiles.map((f) => f.originalName).join(', ')}
+                        </p>
+                        <p className="text-xs text-slate-500 mt-1">
+                          {new Date(job.createdAt).toLocaleString()}
+                        </p>
+                      </div>
+                      {job.status === 'done' && job.outputFiles.length > 0 && (
+                        <button
+                          className="text-xs text-sky-200 underline hover:text-sky-100"
+                          onClick={() => handleDownload(job)}
+                        >
+                          {text.download}
+                        </button>
+                      )}
+                    </div>
                   </div>
                 ))
               )}
@@ -1042,6 +1347,7 @@ export default function WorkspacePage() {
           </div>
         </div>
       )}
+
 
       {/* Cookie Consent Banner */}
       {cookieConsent === null && (

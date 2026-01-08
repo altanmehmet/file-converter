@@ -7,6 +7,32 @@ interface RunCommandOptions {
   env?: NodeJS.ProcessEnv;
 }
 
+// Sanitize log messages to remove sensitive information
+const sanitizeLogMessage = (message: string): string | null => {
+  if (!message || message.length === 0) return null;
+  
+  // Remove file paths (absolute and relative)
+  let sanitized = message
+    .replace(/\/[^\s]+/g, '[PATH]') // Remove absolute paths
+    .replace(/\.\.[\/\\]/g, '[PATH]') // Remove relative paths
+    .replace(/[A-Z]:\\[^\s]+/g, '[PATH]') // Remove Windows paths
+    .replace(/tmp\/[^\s]+/g, '[TMP]') // Remove tmp paths
+    .replace(/\/app\/[^\s]+/g, '[APP]'); // Remove app paths
+  
+  // Remove job IDs and UUIDs
+  sanitized = sanitized.replace(/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/gi, '[ID]');
+  
+  // Remove email addresses
+  sanitized = sanitized.replace(/[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}/g, '[EMAIL]');
+  
+  // Limit message length
+  if (sanitized.length > 200) {
+    sanitized = sanitized.substring(0, 200) + '...';
+  }
+  
+  return sanitized;
+};
+
 export const runCommand = async (
   jobId: string,
   command: string,
@@ -27,11 +53,17 @@ export const runCommand = async (
       }, options.timeoutMs);
 
     child.stdout.on('data', (data) => {
-      jobStore.addLog(jobId, 'info', `${command}: ${data.toString().trim()}`);
+      const sanitized = sanitizeLogMessage(data.toString().trim());
+      if (sanitized) {
+        jobStore.addLog(jobId, 'info', sanitized);
+      }
     });
 
     child.stderr.on('data', (data) => {
-      jobStore.addLog(jobId, 'error', `${command}: ${data.toString().trim()}`);
+      const sanitized = sanitizeLogMessage(data.toString().trim());
+      if (sanitized) {
+        jobStore.addLog(jobId, 'error', sanitized);
+      }
     });
 
     child.on('error', (err) => {

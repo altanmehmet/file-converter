@@ -16,17 +16,13 @@ RUN apt-get update \
 COPY package.json package-lock.json* ./
 RUN npm ci
 
-# Copy public folder first to ensure icons are included
-COPY public ./public
-
-COPY . .
-
-RUN npm run build
+# Don't build, just install dependencies
+# Development server will handle building
 
 RUN mkdir -p /app/tmp && chown -R node:node /app
 USER node
 
-ENV NODE_ENV=production
 EXPOSE 3000
 
-CMD ["npm", "run", "start"]
+CMD ["npm", "run", "dev"]
+

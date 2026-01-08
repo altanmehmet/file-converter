@@ -85,7 +85,7 @@ export const processJob = async (jobId: string) => {
   if (!job) return;
 
   jobStore.setJobStatus(jobId, 'processing', 'Hazirlaniyor');
-  jobStore.addLog(jobId, 'info', `Starting ${job.presetId}`);
+  jobStore.addLog(jobId, 'info', `Starting conversion: ${job.presetId}`);
 
   try {
     const dirs = await getJobDirs(jobId);
@@ -112,10 +112,16 @@ export const processJob = async (jobId: string) => {
     jobStore.setOutput(jobId, outputs);
     jobStore.setProgress(jobId, 100, 'Tamamlandi');
     jobStore.setJobStatus(jobId, 'done', 'Tamamlandi');
-    jobStore.addLog(jobId, 'info', `Job ${jobId} finished`);
+    jobStore.addLog(jobId, 'info', 'Conversion completed successfully');
   } catch (err) {
     jobStore.setJobStatus(jobId, 'failed', 'Hata olustu');
-    jobStore.setError(jobId, err instanceof Error ? err.message : String(err));
-    jobStore.addLog(jobId, 'error', String(err));
+    // Sanitize error message
+    const errorMsg = err instanceof Error ? err.message : String(err);
+    const sanitizedError = errorMsg
+      .replace(/\/[^\s]+/g, '[PATH]')
+      .replace(/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/gi, '[ID]')
+      .substring(0, 200);
+    jobStore.setError(jobId, sanitizedError);
+    jobStore.addLog(jobId, 'error', `Error: ${sanitizedError}`);
   }
 };

@@ -4,6 +4,7 @@ import fsPromises from 'fs/promises';
 import path from 'path';
 import { ALLOWED_EXTENSIONS, JOB_ROOT, MAX_FILE_SIZE_BYTES, TMP_ROOT, UPLOAD_ROOT } from './config';
 import { UploadedFile } from '@/lib/types';
+import { encryptBuffer } from './encryption';
 
 export const ensureTempRoots = async () => {
   await Promise.all([
@@ -36,17 +37,20 @@ export const saveUploadedFile = async (file: File): Promise<UploadedFile> => {
   await fsPromises.mkdir(uploadDir, { recursive: true });
 
   const buffer = Buffer.from(await file.arrayBuffer());
-  const filePath = path.join(uploadDir, originalName);
-  await fsPromises.writeFile(filePath, buffer);
+  // Encrypt file before saving
+  const { encrypted } = await encryptBuffer(buffer);
+  const filePath = path.join(uploadDir, originalName + '.encrypted');
+  await fsPromises.writeFile(filePath, encrypted);
 
   return {
     id: fileId,
     originalName,
     ext,
     mimeType: file.type || 'application/octet-stream',
-    size: buffer.length,
+    size: buffer.length, // Original size, not encrypted size
     path: filePath,
     createdAt: Date.now(),
+    encrypted: true, // Mark as encrypted
   };
 };
 
@@ -62,7 +66,17 @@ export const getJobDirs = async (jobId: string) => {
 export const copyUploadToJob = async (jobId: string, file: UploadedFile) => {
   const dirs = await getJobDirs(jobId);
   const destination = path.join(dirs.inputs, sanitizeFilename(file.originalName));
-  await fsPromises.copyFile(file.path, destination);
+  
+  // If file is encrypted, decrypt it before copying
+  if (file.encrypted) {
+    const { decryptBuffer } = await import('./encryption');
+    const encryptedData = await fsPromises.readFile(file.path);
+    const decryptedData = await decryptBuffer(encryptedData);
+    await fsPromises.writeFile(destination, decryptedData);
+  } else {
+    await fsPromises.copyFile(file.path, destination);
+  }
+  
   return destination;
 };
 
@@ -71,7 +85,20 @@ export const removePath = async (target: string) => {
     return;
   }
   if (fs.existsSync(target)) {
-    await fsPromises.rm(target, { recursive: true, force: true });
+    const stats = await fsPromises.stat(target);
+    if (stats.isDirectory()) {
+      // For directories, recursively delete (encrypted files inside will be handled)
+      await fsPromises.rm(target, { recursive: true, force: true });
+    } else {
+      // Use secure deletion for encrypted files
+      if (target.endsWith('.encrypted')) {
+        const { secureDelete } = await import('./encryption');
+        await secureDelete(target);
+      } else {
+        // Regular file deletion
+        await fsPromises.unlink(target);
+      }
+    }
   }
 };
 

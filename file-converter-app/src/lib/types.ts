@@ -19,6 +19,7 @@ export interface UploadedFile {
   size: number;
   path: string;
   createdAt: number;
+  encrypted?: boolean;
 }
 
 export interface OutputFile {
