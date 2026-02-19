@@ -1,0 +1,46 @@
+{
+  "generatedAt": "2026-02-19T13:47:29.314Z",
+  "port": 3010,
+  "totalMs": 7926.735541999999,
+  "results": [
+    {
+      "scenario": "image_convert_8_files",
+      "elapsedMs": 1503.1915409999992,
+      "inputBytes": 16838652,
+      "outputBytes": 6491346,
+      "inputMb": 16.06,
+      "outputMb": 6.19,
+      "throughputMbPerSec": 10.68,
+      "compressionPct": 61.45,
+      "jobsTotal": 8,
+      "jobsFailed": 0,
+      "success": true
+    },
+    {
+      "scenario": "pdf_merge_5_files",
+      "elapsedMs": 613.4894589999994,
+      "inputBytes": 55767,
+      "outputBytes": 51040,
+      "inputMb": 0.05,
+      "outputMb": 0.05,
+      "throughputMbPerSec": 0.09,
+      "compressionPct": 8.48,
+      "jobsTotal": 1,
+      "jobsFailed": 0,
+      "success": true
+    },
+    {
+      "scenario": "pdf_split_36_pages_every_6",
+      "elapsedMs": 617.5562090000003,
+      "inputBytes": 32168,
+      "outputBytes": 35822,
+      "inputMb": 0.03,
+      "outputMb": 0.03,
+      "throughputMbPerSec": 0.05,
+      "compressionPct": -11.36,
+      "jobsTotal": 1,
+      "jobsFailed": 0,
+      "success": true
+    }
+  ]
+}

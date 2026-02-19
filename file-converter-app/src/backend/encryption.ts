@@ -66,8 +66,7 @@ export const secureDelete = async (filePath: string): Promise<void> => {
     
     // Finally delete
     await fs.unlink(filePath);
-  } catch (err) {
+  } catch {
     // File might not exist, ignore
   }
 };
-

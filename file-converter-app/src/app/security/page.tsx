@@ -1,4 +1,5 @@
 import type { Metadata } from 'next';
+import Link from 'next/link';
 
 export const metadata: Metadata = {
   title: 'Security & Data Protection',
@@ -101,14 +102,13 @@ export default function SecurityPage() {
         </div>
         <div className="mt-8 pt-6 border-t border-slate-700/50">
           <div className="flex flex-wrap gap-4 text-sm text-slate-400">
-            <a href="/" className="hover:text-slate-200 underline">Home</a>
-            <a href="/privacy" className="hover:text-slate-200 underline">Privacy Policy</a>
-            <a href="/terms" className="hover:text-slate-200 underline">Terms of Service</a>
-            <a href="/cookies" className="hover:text-slate-200 underline">Cookie Policy</a>
+            <Link href="/" className="hover:text-slate-200 underline">Home</Link>
+            <Link href="/privacy" className="hover:text-slate-200 underline">Privacy Policy</Link>
+            <Link href="/terms" className="hover:text-slate-200 underline">Terms of Service</Link>
+            <Link href="/cookies" className="hover:text-slate-200 underline">Cookie Policy</Link>
           </div>
         </div>
       </div>
     </div>
   );
 }
-

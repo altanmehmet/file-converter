@@ -6,7 +6,8 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "eslint",
+    "perf:test": "node scripts/perf-benchmark.mjs"
   },
   "dependencies": {
     "archiver": "^7.0.1",

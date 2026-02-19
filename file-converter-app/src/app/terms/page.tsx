@@ -1,4 +1,5 @@
 import type { Metadata } from 'next';
+import Link from 'next/link';
 
 export const metadata: Metadata = {
   title: 'Terms of Service',
@@ -56,7 +57,7 @@ export default function TermsPage() {
           <section>
             <h2 className="text-xl font-semibold mb-3">5. Service Availability</h2>
             <p>
-              We strive to provide reliable service but do not guarantee 100% uptime. The service is provided "as is" 
+              We strive to provide reliable service but do not guarantee 100% uptime. The service is provided &quot;as is&quot; 
               without warranties of any kind.
             </p>
           </section>
@@ -79,14 +80,13 @@ export default function TermsPage() {
         </div>
         <div className="mt-8 pt-6 border-t border-slate-700/50">
           <div className="flex flex-wrap gap-4 text-sm text-slate-400">
-            <a href="/" className="hover:text-slate-200 underline">Home</a>
-            <a href="/privacy" className="hover:text-slate-200 underline">Privacy Policy</a>
-            <a href="/cookies" className="hover:text-slate-200 underline">Cookie Policy</a>
-            <a href="/security" className="hover:text-slate-200 underline">Security</a>
+            <Link href="/" className="hover:text-slate-200 underline">Home</Link>
+            <Link href="/privacy" className="hover:text-slate-200 underline">Privacy Policy</Link>
+            <Link href="/cookies" className="hover:text-slate-200 underline">Cookie Policy</Link>
+            <Link href="/security" className="hover:text-slate-200 underline">Security</Link>
           </div>
         </div>
       </div>
     </div>
   );
 }
-

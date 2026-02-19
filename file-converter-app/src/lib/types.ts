@@ -53,6 +53,7 @@ export interface LogLine {
 }
 
 export type PresetOptionType = 'select' | 'number' | 'boolean' | 'text';
+export type PresetCategory = 'documents' | 'pdf' | 'images';
 
 export interface PresetOption {
   key: string;
@@ -68,6 +69,7 @@ export interface PresetOption {
 
 export interface PresetDefinition {
   id: PresetId;
+  category: PresetCategory;
   title: string;
   description: string;
   pinned?: boolean;

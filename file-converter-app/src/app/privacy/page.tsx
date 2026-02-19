@@ -1,4 +1,5 @@
 import type { Metadata } from 'next';
+import Link from 'next/link';
 
 export const metadata: Metadata = {
   title: 'Privacy Policy',
@@ -57,7 +58,7 @@ export default function PrivacyPage() {
             <h2 className="text-xl font-semibold mb-3">5. Third-Party Services</h2>
             <p>
               We use Google AdSense to display advertisements. Google may use cookies and collect data according to 
-              their privacy policy. You can opt out of personalized ads through Google's ad settings.
+              their privacy policy. You can opt out of personalized ads through Google&apos;s ad settings.
             </p>
           </section>
 
@@ -85,14 +86,13 @@ export default function PrivacyPage() {
         </div>
         <div className="mt-8 pt-6 border-t border-slate-700/50">
           <div className="flex flex-wrap gap-4 text-sm text-slate-400">
-            <a href="/" className="hover:text-slate-200 underline">Home</a>
-            <a href="/terms" className="hover:text-slate-200 underline">Terms of Service</a>
-            <a href="/cookies" className="hover:text-slate-200 underline">Cookie Policy</a>
-            <a href="/security" className="hover:text-slate-200 underline">Security</a>
+            <Link href="/" className="hover:text-slate-200 underline">Home</Link>
+            <Link href="/terms" className="hover:text-slate-200 underline">Terms of Service</Link>
+            <Link href="/cookies" className="hover:text-slate-200 underline">Cookie Policy</Link>
+            <Link href="/security" className="hover:text-slate-200 underline">Security</Link>
           </div>
         </div>
       </div>
     </div>
   );
 }
-
