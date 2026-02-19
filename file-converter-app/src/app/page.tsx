@@ -838,17 +838,23 @@ export default function WorkspacePage() {
               return (
                 <div
                   key={preset.id}
-                  className={`w-full rounded-xl border px-3 py-3 text-left transition ${
+                  role="button"
+                  tabIndex={0}
+                  onClick={() => setSelectedPreset(preset.id)}
+                  onKeyDown={(event) => {
+                    if (event.key === 'Enter' || event.key === ' ') {
+                      event.preventDefault();
+                      setSelectedPreset(preset.id);
+                    }
+                  }}
+                  className={`w-full cursor-pointer rounded-xl border px-3 py-3 text-left transition ${
                     active
                       ? 'border-cyan-400/70 bg-gradient-to-br from-cyan-500/18 to-blue-500/8 shadow-[0_0_0_1px_rgba(34,211,238,0.35)]'
                       : 'border-white/10 bg-white/[0.03] hover:border-white/25 hover:bg-white/[0.06]'
                   }`}
                 >
                   <div className="flex items-start justify-between gap-2">
-                    <button
-                      onClick={() => setSelectedPreset(preset.id)}
-                      className="flex-1 text-left"
-                    >
+                    <div className="flex-1 text-left">
                       <div className="flex flex-wrap items-center gap-2">
                         <span className="text-sm font-medium text-zinc-100">{preset.title}</span>
                         {preset.pinned && (
@@ -867,9 +873,12 @@ export default function WorkspacePage() {
                           </span>
                         )}
                       </div>
-                    </button>
+                    </div>
                     <button
-                      onClick={() => toggleFavoritePreset(preset.id)}
+                      onClick={(event) => {
+                        event.stopPropagation();
+                        toggleFavoritePreset(preset.id);
+                      }}
                       aria-label={isFavorite ? text.unfavorite : text.favorite}
                       className={`rounded-md border px-2 py-1 text-xs transition ${
                         isFavorite
