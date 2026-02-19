@@ -47,3 +47,9 @@ docker-compose up -d
 
 Apache-2.0
 
+## Docs
+
+- Main docs: `file-converter-app/README.md`
+- Agent quickstart (low-token): `file-converter-app/docs/AGENT_MINIMAL.md`
+
+

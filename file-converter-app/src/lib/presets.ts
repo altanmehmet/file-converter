@@ -130,6 +130,15 @@ export const PRESETS: PresetDefinition[] = [
     outputExtension: '.pdf',
     defaultOptions: { quality: 'high' },
   },
+  {
+    id: 'ppt_to_pdf',
+    category: 'documents',
+    title: 'PowerPoint → PDF',
+    description: 'PPT/PPTX sunum dosyalarını PDF formatına dönüştürür.',
+    accepts: ['.ppt', '.pptx'],
+    outputExtension: '.pdf',
+    defaultOptions: { quality: 'high' },
+  },
 ];
 
 export const PRESET_MAP = PRESETS.reduce<Record<string, PresetDefinition>>((acc, preset) => {

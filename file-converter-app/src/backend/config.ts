@@ -15,6 +15,8 @@ export const ALLOWED_EXTENSIONS = new Set([
   '.docx',
   '.xls',
   '.xlsx',
+  '.ppt',
+  '.pptx',
   '.png',
   '.jpg',
   '.jpeg',

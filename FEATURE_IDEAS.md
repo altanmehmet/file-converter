@@ -1,6 +1,6 @@
 # 💡 Özellik Önerileri - Quick Convert
 
-> **Son Güncelleme:** v1.1.0 - 8 özellik tamamlandı ✅
+> **Son Güncelleme:** v1.2.0 - 12 özellik tamamlandı ✅
 > 
 > **Tamamlanan:** File Preview, Conversion History, Individual Progress Bars, File Size Display, Keyboard Shortcuts, Better Error Messages, File Encryption (UI), Rate Limiting UI, Log Sanitization
 
@@ -44,9 +44,9 @@
 
 ## 📦 Yeni Format Desteği
 
-### 7. **PowerPoint → PDF** ⭐⭐⭐
-- PPT/PPTX → PDF conversion
-- LibreOffice ile kolay
+### 7. **PowerPoint → PDF** ✅ **TAMAMLANDI**
+- ✅ PPT/PPTX -> PDF conversion
+- ✅ LibreOffice headless ile çalışıyor
 
 ### 8. **RTF/ODT Support** ⭐⭐
 - RTF → PDF
@@ -94,25 +94,25 @@
 - System preference detection
 - localStorage'da sakla
 
-### 16. **Favorite Presets** ⭐⭐
-- Preset'leri favorilere ekle
-- Favoriler üstte göster
-- localStorage'da sakla
+### 16. **Favorite Presets** ✅ **TAMAMLANDI**
+- ✅ Preset'leri favorilere ekle
+- ✅ Favoriler üstte göster
+- ✅ localStorage'da sakla
 
 ### 17. **File Drag Reordering** ⭐
 - Sürükle-bırak ile sıralama (zaten var ama iyileştirilebilir)
 - Visual feedback
 - Merge order için önemli
 
-### 18. **Bulk Operations** ⭐⭐
-- Tüm dosyaları seç/kaldır
-- Tüm job'ları temizle
-- Toplu indirme (zaten var)
+### 18. **Bulk Operations** ⚡ **KISMİ TAMAMLANDI**
+- ⏳ Tüm dosyaları seç/kaldır
+- ✅ Tüm job'ları temizle
+- ✅ Toplu indirme (zaten var)
 
-### 19. **Search/Filter** ⭐
-- Preset arama
-- Dosya filtreleme
-- Job filtreleme (status'e göre)
+### 19. **Search/Filter** ✅ **TAMAMLANDI**
+- ✅ Preset arama
+- ⏳ Dosya filtreleme
+- ✅ Job filtreleme (status'e göre)
 
 ### 20. **Statistics Dashboard** ⭐⭐
 - Toplam dönüştürülen dosya sayısı
@@ -205,7 +205,7 @@
 
 ---
 
-## ✅ Tamamlanan Özellikler (v1.1.0)
+## ✅ Tamamlanan Özellikler (v1.2.0)
 
 1. ✅ **File Preview** - Dosya önizleme ve bilgileri
 2. ✅ **Conversion History** - localStorage ile geçmiş
@@ -216,6 +216,9 @@
 7. ✅ **File Encryption (UI)** - Güvenli işleme toggle
 8. ✅ **Rate Limiting UI** - Limit gösterimi ve uyarılar
 9. ✅ **Log Sanitization** - Güvenlik iyileştirmesi
+10. ✅ **PowerPoint → PDF** - PPT/PPTX desteği
+11. ✅ **Favorite Presets** - Preset favorileme ve sıralama
+12. ✅ **Job Status Filter + Clear All Jobs** - Kuyruk filtreleme ve toplu silme
 
 ## 🎯 En Öncelikli 5 Özellik (Sonraki Versiyon)
 
@@ -326,4 +329,3 @@
 - ✅ Batch conversion
 - ✅ GDPR compliance
 - ✅ SEO optimizasyonu
-

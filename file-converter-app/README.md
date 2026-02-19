@@ -12,9 +12,11 @@ LibreOffice, Ghostscript, qpdf, sharp ve pdf-lib ile dosyalar yerelde işlenir.
   - PDF Split (aralık veya her X sayfada)
   - Images -> WebP / PNG / JPG
   - Excel -> PDF
+  - PowerPoint -> PDF
 - Drag & drop yükleme + batch dönüştürme
 - Job queue: `Waiting / Processing / Done / Failed`
 - Progress bar + job log modalı + `Retry` / `Remove`
+- Job status filtresi + `Clear all jobs`
 - Çıktılar: tekil indirme + `Download all as ZIP`
 - Ayarlar modalı:
   - Dil: Türkçe / English
@@ -22,8 +24,10 @@ LibreOffice, Ghostscript, qpdf, sharp ve pdf-lib ile dosyalar yerelde işlenir.
   - Temp TTL (dakika)
 - Yeni UX iyileştirmeleri:
   - Preset arama
+  - Favorite preset (localStorage)
   - Kategori filtreleri (Tümü / Doküman / PDF / Görsel)
   - Toplu kuyruk aksiyonları (`Retry failed`, `Remove done`)
+  - Klavye kısayolları (`Ctrl/Cmd+K`, `Ctrl/Cmd+D`, `Ctrl/Cmd+,`, `Esc`)
   - Sağ panelde kuyruk özeti (boyut, kompresyon, ortalama süre)
 
 ## Stack
@@ -57,6 +61,17 @@ Not: `docker-compose.yml` şu an host `3001 -> container 3000` map’li.
 - `DELETE /api/job/:id`
 - `GET /api/download/:jobId`
 - `GET /api/download-zip?jobIds=...`
+
+## Dokuman Indeksi
+- Low-token ajan runbook: `docs/AGENT_MINIMAL.md`
+- API referansi: `docs/API.md`
+- Mimari ozeti: `docs/ARCHITECTURE.md`
+- Preset referansi: `docs/PRESETS.md`
+- Security notlari: `docs/SECURITY.md`
+- Render deployment: `docs/DEPLOYMENT_RENDER.md`
+- Hata cozumleri: `docs/TROUBLESHOOTING.md`
+- Yol haritasi: `docs/ROADMAP.md`
+- Surum gecmisi: `CHANGELOG.md`
 
 ## Güvenlik ve Temp Yönetimi
 - Path traversal kontrolü

@@ -33,6 +33,7 @@ type ClientJob = Job & {
 
 type Language = 'tr' | 'en';
 type PresetFilter = 'all' | PresetCategory;
+type JobFilter = 'all' | Job['status'];
 
 type Copy = {
   appName: string;
@@ -77,7 +78,14 @@ type Copy = {
   queueOverview: string;
   compression: string;
   avgDuration: string;
+  favoritePresets: string;
+  favorite: string;
+  unfavorite: string;
+  jobFilter: string;
+  clearAllJobs: string;
+  shortcutsHint: string;
   categories: Record<PresetFilter, string>;
+  jobFilters: Record<JobFilter, string>;
   status: Record<Job['status'], string>;
   messages: {
     invalidForPreset: string;
@@ -97,6 +105,8 @@ type Copy = {
     noPresetResults: string;
     noFailedJobs: string;
     noDoneJobsRemove: string;
+    noJobsForFilter: string;
+    allJobsRemoved: string;
   };
 };
 
@@ -144,11 +154,24 @@ const translations: Record<Language, Copy> = {
     queueOverview: 'Kuyruk Özeti',
     compression: 'Kompresyon',
     avgDuration: 'Ort. Süre',
+    favoritePresets: 'Favori Presetler',
+    favorite: 'Favori',
+    unfavorite: 'Favoriden çıkar',
+    jobFilter: 'İş Filtresi',
+    clearAllJobs: 'Tüm işleri kaldır',
+    shortcutsHint: 'Kısayol: Ctrl/Cmd+K dönüştür, Ctrl/Cmd+D temizle, Ctrl/Cmd+, ayarlar',
     categories: {
       all: 'Tümü',
       documents: 'Doküman',
       pdf: 'PDF',
       images: 'Görsel',
+    },
+    jobFilters: {
+      all: 'Tümü',
+      waiting: 'Bekliyor',
+      processing: 'İşleniyor',
+      done: 'Tamamlandı',
+      failed: 'Hata',
     },
     status: {
       waiting: 'BEKLİYOR',
@@ -174,6 +197,8 @@ const translations: Record<Language, Copy> = {
       noPresetResults: 'Arama/filtreye uygun preset bulunamadı.',
       noFailedJobs: 'Tekrar denenecek hatalı iş yok.',
       noDoneJobsRemove: 'Kaldırılacak tamamlanmış iş yok.',
+      noJobsForFilter: 'Seçili filtre için iş bulunamadı.',
+      allJobsRemoved: 'Tüm işler kaldırıldı.',
     },
   },
   en: {
@@ -219,11 +244,24 @@ const translations: Record<Language, Copy> = {
     queueOverview: 'Queue Overview',
     compression: 'Compression',
     avgDuration: 'Avg Duration',
+    favoritePresets: 'Favorite Presets',
+    favorite: 'Favorite',
+    unfavorite: 'Remove favorite',
+    jobFilter: 'Job Filter',
+    clearAllJobs: 'Clear all jobs',
+    shortcutsHint: 'Shortcut: Ctrl/Cmd+K convert, Ctrl/Cmd+D clear, Ctrl/Cmd+, settings',
     categories: {
       all: 'All',
       documents: 'Docs',
       pdf: 'PDF',
       images: 'Images',
+    },
+    jobFilters: {
+      all: 'All',
+      waiting: 'Waiting',
+      processing: 'Processing',
+      done: 'Done',
+      failed: 'Failed',
     },
     status: {
       waiting: 'WAITING',
@@ -249,6 +287,8 @@ const translations: Record<Language, Copy> = {
       noPresetResults: 'No preset matches this filter/query.',
       noFailedJobs: 'No failed jobs to retry.',
       noDoneJobsRemove: 'No completed jobs to remove.',
+      noJobsForFilter: 'No jobs for selected filter.',
+      allJobsRemoved: 'All jobs removed.',
     },
   },
 };
@@ -264,6 +304,7 @@ const presetDescriptionEn: Partial<Record<PresetId, { description?: string; warn
   pdf_split: { description: 'Split by ranges (1-3,5,7-9) or every X pages.' },
   image_convert: { description: 'Convert images to WebP, PNG, JPG with resize and quality controls.' },
   excel_to_pdf: { description: 'Convert XLS/XLSX files into high-quality PDF.' },
+  ppt_to_pdf: { description: 'Convert PPT/PPTX presentation files to PDF.' },
 };
 
 const optionLocaleEn: Partial<Record<PresetId, Record<string, {
@@ -349,6 +390,8 @@ export default function WorkspacePage() {
   const [language, setLanguage] = useState<Language>('tr');
   const [presetFilter, setPresetFilter] = useState<PresetFilter>('all');
   const [presetQuery, setPresetQuery] = useState('');
+  const [favoritePresets, setFavoritePresets] = useState<PresetId[]>([]);
+  const [jobFilter, setJobFilter] = useState<JobFilter>('all');
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [isDetailsOpen, setIsDetailsOpen] = useState(false);
   const [logsJob, setLogsJob] = useState<ClientJob | null>(null);
@@ -357,6 +400,8 @@ export default function WorkspacePage() {
 
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const autoZipSignatureRef = useRef<string>('');
+  const startConversionRef = useRef<(() => Promise<void>) | null>(null);
+  const clearUploadsRef = useRef<(() => void) | null>(null);
 
   const presetMap = useMemo(() => Object.fromEntries(PRESETS.map((preset) => [preset.id, preset])), []);
   const optionDefaults = useMemo(() => {
@@ -379,6 +424,7 @@ export default function WorkspacePage() {
     const storedLang = localStorage.getItem('lb_lang');
     const storedAutoZip = localStorage.getItem('lb_auto_zip');
     const storedTtl = localStorage.getItem('lb_ttl_minutes');
+    const storedFavorites = localStorage.getItem('lb_favorite_presets');
 
     if (storedLang === 'tr' || storedLang === 'en') setLanguage(storedLang);
     if (storedAutoZip === '1' || storedAutoZip === '0') setAutoZip(storedAutoZip === '1');
@@ -386,6 +432,18 @@ export default function WorkspacePage() {
     const parsedTtl = Number(storedTtl);
     if (Number.isFinite(parsedTtl) && parsedTtl >= 5 && parsedTtl <= 240) {
       setTtlMinutes(parsedTtl);
+    }
+
+    if (storedFavorites) {
+      try {
+        const parsed = JSON.parse(storedFavorites);
+        if (Array.isArray(parsed)) {
+          const valid = parsed.filter((id): id is PresetId => PRESETS.some((preset) => preset.id === id));
+          setFavoritePresets(valid);
+        }
+      } catch {
+        // ignore malformed localStorage payload
+      }
     }
   }, []);
 
@@ -405,10 +463,17 @@ export default function WorkspacePage() {
   }, [ttlMinutes]);
 
   useEffect(() => {
+    if (typeof window === 'undefined') return;
+    localStorage.setItem('lb_favorite_presets', JSON.stringify(favoritePresets));
+  }, [favoritePresets]);
+
+  useEffect(() => {
     if (!logsJob) return;
     const fresh = jobs.find((job) => job.id === logsJob.id);
     if (fresh) setLogsJob(fresh);
   }, [jobs, logsJob]);
+
+  const favoriteSet = useMemo(() => new Set(favoritePresets), [favoritePresets]);
 
   const filteredPresets = useMemo(() => {
     const q = presetQuery.trim().toLowerCase();
@@ -421,11 +486,15 @@ export default function WorkspacePage() {
     });
 
     return list.sort((a, b) => {
+      const aFav = favoriteSet.has(a.id);
+      const bFav = favoriteSet.has(b.id);
+      if (aFav && !bFav) return -1;
+      if (!aFav && bFav) return 1;
       if (a.pinned && !b.pinned) return -1;
       if (!a.pinned && b.pinned) return 1;
       return a.title.localeCompare(b.title, language === 'tr' ? 'tr' : 'en');
     });
-  }, [presetFilter, presetQuery, language]);
+  }, [presetFilter, presetQuery, language, favoriteSet]);
 
   useEffect(() => {
     if (!filteredPresets.some((preset) => preset.id === selectedPreset) && filteredPresets.length > 0) {
@@ -534,6 +603,18 @@ export default function WorkspacePage() {
     setStatusMessage(text.messages.uploadsCleared);
   };
 
+  startConversionRef.current = startConversion;
+  clearUploadsRef.current = clearUploads;
+
+  const toggleFavoritePreset = (presetId: PresetId) => {
+    setFavoritePresets((prev) => {
+      if (prev.includes(presetId)) {
+        return prev.filter((id) => id !== presetId);
+      }
+      return [...prev, presetId];
+    });
+  };
+
   const handleRetry = async (jobId: string) => {
     await fetch(`/api/job/${jobId}/retry`, { method: 'POST' });
     fetchJob(jobId);
@@ -566,6 +647,13 @@ export default function WorkspacePage() {
     setJobs((prev) => prev.filter((job) => job.status !== 'done'));
   };
 
+  const clearAllJobs = async () => {
+    if (!jobs.length) return;
+    await Promise.all(jobs.map((job) => fetch(`/api/job/${job.id}`, { method: 'DELETE' })));
+    setJobs([]);
+    setStatusMessage(text.messages.allJobsRemoved);
+  };
+
   const reorderUploads = (sourceId: string, targetId: string) => {
     const next = [...uploads];
     const from = next.findIndex((item) => item.id === sourceId);
@@ -588,6 +676,40 @@ export default function WorkspacePage() {
     return () => clearInterval(timer);
   }, [jobs]);
 
+  useEffect(() => {
+    const onKeyDown = (event: KeyboardEvent) => {
+      const target = event.target as HTMLElement | null;
+      const tag = target?.tagName?.toLowerCase();
+      const isInputLike = tag === 'input' || tag === 'textarea' || tag === 'select' || target?.isContentEditable;
+      if (isInputLike) return;
+
+      if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 'k') {
+        event.preventDefault();
+        void startConversionRef.current?.();
+      }
+
+      if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 'd') {
+        event.preventDefault();
+        clearUploadsRef.current?.();
+      }
+
+      if ((event.ctrlKey || event.metaKey) && event.key === ',') {
+        event.preventDefault();
+        setIsSettingsOpen(true);
+      }
+
+      if (event.key === 'Escape') {
+        setIsSettingsOpen(false);
+        setIsDetailsOpen(false);
+        setLogsJob(null);
+      }
+    };
+
+    window.addEventListener('keydown', onKeyDown);
+    return () => window.removeEventListener('keydown', onKeyDown);
+  }, []);
+
+  const visibleJobs = jobs.filter((job) => (jobFilter === 'all' ? true : job.status === jobFilter));
   const doneJobs = jobs.filter((job) => job.status === 'done');
   const waitingCount = jobs.filter((job) => job.status === 'waiting').length;
   const processingCount = jobs.filter((job) => job.status === 'processing').length;
@@ -697,6 +819,10 @@ export default function WorkspacePage() {
             ))}
           </div>
 
+          <p className="mb-2 text-[11px] uppercase tracking-wide text-zinc-500">
+            {text.favoritePresets}: {favoritePresets.length}
+          </p>
+
           <div className="space-y-2">
             {filteredPresets.length === 0 && (
               <p className="rounded-xl border border-white/10 bg-black/20 px-3 py-3 text-xs text-zinc-400">
@@ -707,29 +833,52 @@ export default function WorkspacePage() {
             {filteredPresets.map((preset) => {
               const copy = readPresetCopy(preset, language);
               const active = preset.id === selectedPreset;
+              const isFavorite = favoriteSet.has(preset.id);
 
               return (
-                <button
+                <div
                   key={preset.id}
-                  onClick={() => setSelectedPreset(preset.id)}
                   className={`w-full rounded-xl border px-3 py-3 text-left transition ${
                     active
                       ? 'border-cyan-400/70 bg-gradient-to-br from-cyan-500/18 to-blue-500/8 shadow-[0_0_0_1px_rgba(34,211,238,0.35)]'
                       : 'border-white/10 bg-white/[0.03] hover:border-white/25 hover:bg-white/[0.06]'
                   }`}
                 >
-                  <div className="flex flex-wrap items-center gap-2">
-                    <span className="text-sm font-medium text-zinc-100">{preset.title}</span>
-                    {preset.pinned && (
-                      <span className="rounded-full border border-amber-300/40 bg-amber-400/15 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-amber-100">
-                        {text.pinned}
-                      </span>
-                    )}
-                    {preset.badge && (
-                      <span className="rounded-full border border-rose-300/40 bg-rose-400/15 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-rose-100">
-                        {preset.badge}
-                      </span>
-                    )}
+                  <div className="flex items-start justify-between gap-2">
+                    <button
+                      onClick={() => setSelectedPreset(preset.id)}
+                      className="flex-1 text-left"
+                    >
+                      <div className="flex flex-wrap items-center gap-2">
+                        <span className="text-sm font-medium text-zinc-100">{preset.title}</span>
+                        {preset.pinned && (
+                          <span className="rounded-full border border-amber-300/40 bg-amber-400/15 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-amber-100">
+                            {text.pinned}
+                          </span>
+                        )}
+                        {isFavorite && (
+                          <span className="rounded-full border border-cyan-300/40 bg-cyan-400/15 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-cyan-100">
+                            {text.favorite}
+                          </span>
+                        )}
+                        {preset.badge && (
+                          <span className="rounded-full border border-rose-300/40 bg-rose-400/15 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-rose-100">
+                            {preset.badge}
+                          </span>
+                        )}
+                      </div>
+                    </button>
+                    <button
+                      onClick={() => toggleFavoritePreset(preset.id)}
+                      aria-label={isFavorite ? text.unfavorite : text.favorite}
+                      className={`rounded-md border px-2 py-1 text-xs transition ${
+                        isFavorite
+                          ? 'border-cyan-300/40 bg-cyan-500/15 text-cyan-100'
+                          : 'border-white/15 bg-white/[0.03] text-zinc-300 hover:border-white/30'
+                      }`}
+                    >
+                      ★
+                    </button>
                   </div>
                   <p className="mt-1 text-xs leading-relaxed text-zinc-300">{copy.description}</p>
                   {copy.warning && (
@@ -737,7 +886,7 @@ export default function WorkspacePage() {
                       {text.warning}: {copy.warning}
                     </p>
                   )}
-                </button>
+                </div>
               );
             })}
           </div>
@@ -750,6 +899,7 @@ export default function WorkspacePage() {
                 <p className="text-[11px] uppercase tracking-[0.2em] text-cyan-300">{text.appName}</p>
                 <h1 className="mt-1 text-2xl font-semibold text-zinc-50">{text.workspace}</h1>
                 <p className="mt-1 text-sm text-zinc-300">{text.lead}</p>
+                <p className="mt-1 text-[11px] text-zinc-500">{text.shortcutsHint}</p>
               </div>
 
               <div className="flex w-full flex-wrap items-center gap-2 sm:w-auto">
@@ -893,14 +1043,37 @@ export default function WorkspacePage() {
                 >
                   {text.removeDone}
                 </button>
+                <button
+                  onClick={clearAllJobs}
+                  className="rounded-lg border border-white/15 bg-white/[0.03] px-2.5 py-1 text-[11px] text-zinc-200 hover:bg-white/[0.08]"
+                >
+                  {text.clearAllJobs}
+                </button>
               </div>
             </div>
 
-            {!jobs.length ? (
-              <p className="text-sm text-zinc-400">{text.jobQueueEmpty}</p>
+            <div className="mb-3 flex flex-wrap items-center gap-1.5">
+              <span className="mr-1 text-[11px] uppercase tracking-wide text-zinc-500">{text.jobFilter}</span>
+              {(['all', 'waiting', 'processing', 'done', 'failed'] as JobFilter[]).map((item) => (
+                <button
+                  key={item}
+                  onClick={() => setJobFilter(item)}
+                  className={`rounded-lg px-2 py-1 text-[11px] transition ${
+                    jobFilter === item
+                      ? 'border border-cyan-400/60 bg-cyan-500/15 text-cyan-100'
+                      : 'border border-white/12 bg-white/[0.02] text-zinc-300 hover:border-white/30'
+                  }`}
+                >
+                  {text.jobFilters[item]}
+                </button>
+              ))}
+            </div>
+
+            {!visibleJobs.length ? (
+              <p className="text-sm text-zinc-400">{jobs.length === 0 ? text.jobQueueEmpty : text.messages.noJobsForFilter}</p>
             ) : (
               <div className="space-y-2">
-                {jobs.map((job) => (
+                {visibleJobs.map((job) => (
                   <article key={job.id} className="rounded-xl border border-white/10 bg-black/20 p-3">
                     <div className="flex flex-wrap items-start justify-between gap-2">
                       <div className="min-w-0">

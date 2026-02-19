@@ -1,7 +1,7 @@
 import { jobStore } from '../jobStore';
 import { getJobDirs, copyUploadToJob } from '../storage';
 import { compressPdf, mergePdfs, splitPdf } from './pdf';
-import { convertDocToPdf, convertPdfToDocx, convertExcelToPdf } from './docs';
+import { convertDocToPdf, convertPdfToDocx, convertExcelToPdf, convertPptToPdf } from './docs';
 import { convertImage } from './images';
 import { CompressionLevel, Job, OutputFile, PresetId } from '@/lib/types';
 
@@ -18,6 +18,9 @@ const handleDoc = async (jobId: string, job: Job, inputs: string[], outputsDir: 
   }
   if (job.presetId === 'excel_to_pdf') {
     return [await convertExcelToPdf(jobId, inputs[0], outputsDir)];
+  }
+  if (job.presetId === 'ppt_to_pdf') {
+    return [await convertPptToPdf(jobId, inputs[0], outputsDir)];
   }
   return [await convertPdfToDocx(jobId, inputs[0], outputsDir)];
 };
@@ -74,6 +77,7 @@ const presetGroups: Record<PresetId, 'doc' | 'pdf' | 'image'> = {
   doc_to_pdf: 'doc',
   pdf_to_docx: 'doc',
   excel_to_pdf: 'doc',
+  ppt_to_pdf: 'doc',
   pdf_compress: 'pdf',
   pdf_merge: 'pdf',
   pdf_split: 'pdf',

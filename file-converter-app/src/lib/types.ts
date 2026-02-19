@@ -7,7 +7,8 @@ export type PresetId =
   | 'pdf_merge'
   | 'pdf_split'
   | 'image_convert'
-  | 'excel_to_pdf';
+  | 'excel_to_pdf'
+  | 'ppt_to_pdf';
 
 export type CompressionLevel = 'low' | 'medium' | 'high';
 

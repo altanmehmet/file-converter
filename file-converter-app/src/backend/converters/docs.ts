@@ -66,3 +66,20 @@ export const convertExcelToPdf = async (jobId: string, inputPath: string, output
   };
   return output;
 };
+
+export const convertPptToPdf = async (jobId: string, inputPath: string, outputDir: string) => {
+  await runCommand(jobId, 'soffice', [...sofficeBaseArgs, '--convert-to', 'pdf', '--outdir', outputDir, inputPath], {
+    timeoutMs: 120000,
+  });
+
+  const baseName = sanitizeFilename(path.parse(inputPath).name) + '.pdf';
+  const outPath = path.join(outputDir, baseName);
+  const stat = await fs.stat(outPath);
+  const output: OutputFile = {
+    name: baseName,
+    path: outPath,
+    size: stat.size,
+    mimeType: 'application/pdf',
+  };
+  return output;
+};
